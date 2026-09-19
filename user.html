@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance - User</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333333;
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666666;
+      margin-bottom: 28px;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #444444;
+      font-size: 14px;
+    }
+
+    select,
+    textarea,
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+      margin-bottom: 18px;
+      transition: border 0.2s;
+      font-family: inherit;
+    }
+
+    select:focus,
+    textarea:focus,
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px;
+      border: 0;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      font-family: inherit;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-present {
+      background: #22c55e;
+      color: #ffffff;
+    }
+
+    .btn-leave {
+      background: #f59e0b;
+      color: #ffffff;
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 500;
+      display: none;
+      line-height: 1.45;
+    }
+
+    .success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    .info {
+      background: #e0e7ff;
+      color: #3730a3;
+      border: 1px solid #a5b4fc;
+    }
+
+    .leave-section {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .leave-section.show {
+      display: block;
+    }
+
+    .back-link {
+      display: block;
+      margin-top: 20px;
+      text-align: center;
+      color: #4f46e5;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📍 Attendance</h1>
+    <p class="subtitle">Mark Present only at office location</p>
+
+    <label for="employeeSelect">Select Your Name</label>
+    <select id="employeeSelect">
+      <option value="">Loading names...</option>
+    </select>
+
+    <div class="btn-group">
+      <button class="btn-present" id="presentBtn" type="button">Present</button>
+      <button class="btn-leave" id="leaveBtn" type="button">Leave</button>
+    </div>
+
+    <div class="leave-section" id="leaveSection">
+      <label for="reason">Reason for Leave</label>
+      <textarea id="reason" rows="3" placeholder="Enter reason..."></textarea>
+      <button class="btn-leave" id="submitLeaveBtn" type="button" style="width:100%; margin-top:4px;">Submit Leave</button>
+    </div>
+
+    <div id="status"></div>
+    <a href="index.html" class="back-link">Back to home</a>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://mwluvdedgdshbdnmyjyl.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_pT4vjOCHqiiqZxZAcxHpjg_neX05R-M';
+
+    const OFFICE_LAT = 28.6139;
+    const OFFICE_LNG = 77.2090;
+    const MAX_DISTANCE = 100;
+
+    let db = null;
+
+    const employeeSelect = document.getElementById('employeeSelect');
+    const statusEl = document.getElementById('status');
+    const presentBtn = document.getElementById('presentBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+    const leaveSection = document.getElementById('leaveSection');
+    const reasonInput = document.getElementById('reason');
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showStatus(message, type) {
+      statusEl.style.display = 'block';
+      statusEl.className = type;
+      statusEl.innerHTML = message;
+    }
+
+    function requireSupabase() {
+      if (!db) {
+        showStatus('Supabase did not load. Check your internet connection.', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    function getSelectedEmployee() {
+      const option = employeeSelect.options[employeeSelect.selectedIndex];
+
+      if (!employeeSelect.value || !option) {
+        return null;
+      }
+
+      return {
+        id: employeeSelect.value,
+        name: option.dataset.name
+      };
+    }
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const radius = 6371e3;
+      const lat1Rad = lat1 * Math.PI / 180;
+      const lat2Rad = lat2 * Math.PI / 180;
+      const deltaLat = (lat2 - lat1) * Math.PI / 180;
+      const deltaLng = (lon2 - lon1) * Math.PI / 180;
+
+      const a =
+        Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+        Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+        Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return radius * c;
+    }
+
+    async function loadEmployees() {
+      if (!requireSupabase()) return;
+
+      employeeSelect.innerHTML = '<option value="">Loading names...</option>';
+
+      const { data, error } = await db
+        .from('employees')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        employeeSelect.innerHTML = '<option value="">Error loading names</option>';
+        showStatus('Error loading names: ' + escapeHtml(error.message), 'error');
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        employeeSelect.innerHTML = '<option value="">No employees yet - add from Admin</option>';
+        return;
+      }
+
+      employeeSelect.innerHTML = '<option value="">Select your name</option>';
+
+      data.forEach(function (emp) {
+        const option = document.createElement('option');
+        option.value = emp.id;
+        option.textContent = emp.name;
+        option.dataset.name = emp.name;
+        employeeSelect.appendChild(option);
+      });
+    }
+
+    function showLeaveForm() {
+      const emp = getSelectedEmployee();
+
+      if (!emp) {
+        showStatus('Please select your name first', 'error');
+        return;
+      }
+
+      leaveSection.classList.add('show');
+      reasonInput.focus();
+    }
+
+    async function saveAttendance(record, successMessage) {
+      if (!requireSupabase()) return false;
+
+      const { error } = await db.from('attendance').insert(record);
+
+      if (error) {
+        showStatus('Error saving attendance: ' + escapeHtml(error.message), 'error');
+        return false;
+      }
+
+      showStatus(successMessage, 'success');
+      presentBtn.disabled = true;
+      leaveBtn.disabled = true;
+      leaveSection.classList.remove('show');
+      return true;
+    }
+
+    async function markPresent() {
+      const emp = getSelectedEmployee();
+
+      if (!emp) {
+        showStatus('Please select your name first', 'error');
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        showStatus('Geolocation is not supported by your browser.', 'error');
+        return;
+      }
+
+      showStatus('Checking your location...', 'info');
+
+      navigator.geolocation.getCurrentPosition(
+        async function (position) {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+          const distance = getDistance(userLat, userLng, OFFICE_LAT, OFFICE_LNG);
+
+          if (distance > MAX_DISTANCE) {
+            showStatus('You are too far from office (' + Math.round(distance) + ' m). Present is only allowed at the office location.', 'error');
+            return;
+          }
+
+          const now = new Date();
+          const dateStr = now.toISOString().split('T')[0];
+          const timeStr = now.toTimeString().slice(0, 8);
+
+          await saveAttendance(
+            {
+              employee_id: emp.id,
+              employee_name: emp.name,
+              date: dateStr,
+              time: timeStr,
+              status: 'present',
+              reason: null
+            },
+            'Present marked successfully!<br><strong>' + escapeHtml(emp.name) + '</strong><br>' + dateStr + ' at ' + timeStr
+          );
+        },
+        function () {
+          showStatus('Location access denied or unavailable. Please allow location permission.', 'error');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    async function markLeave() {
+      const emp = getSelectedEmployee();
+
+      if (!emp) {
+        showStatus('Please select your name first', 'error');
+        return;
+      }
+
+      const reason = reasonInput.value.trim();
+
+      if (!reason) {
+        showStatus('Please enter a reason for leave', 'error');
+        return;
+      }
+
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().slice(0, 8);
+
+      showStatus('Saving leave...', 'info');
+
+      await saveAttendance(
+        {
+          employee_id: emp.id,
+          employee_name: emp.name,
+          date: dateStr,
+          time: timeStr,
+          status: 'leave',
+          reason: reason
+        },
+        'Leave marked successfully!<br><strong>' + escapeHtml(emp.name) + '</strong><br>' + dateStr + ' at ' + timeStr + '<br>Reason: ' + escapeHtml(reason)
+      );
+    }
+
+    function setupApp() {
+      if (!window.supabase) {
+        showStatus('Supabase library did not load. The page needs internet access.', 'error');
+        employeeSelect.innerHTML = '<option value="">Supabase failed to load</option>';
+        return;
+      }
+
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      presentBtn.addEventListener('click', markPresent);
+      leaveBtn.addEventListener('click', showLeaveForm);
+      document.getElementById('submitLeaveBtn').addEventListener('click', markLeave);
+
+      employeeSelect.addEventListener('change', function () {
+        statusEl.style.display = 'none';
+        presentBtn.disabled = false;
+        leaveBtn.disabled = false;
+        leaveSection.classList.remove('show');
+        reasonInput.value = '';
+      });
+
+      loadEmployees();
+    }
+
+    window.addEventListener('load', setupApp);
+  </script>
+</body>
+</html>
