@@ -187,9 +187,12 @@
     const SUPABASE_URL = 'https://mwluvdedgdshbdnmyjyl.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_pT4vjOCHqiiqZxZAcxHpjg_neX05R-M';
 
-    const OFFICE_LAT = 21.2758151;
+      const OFFICE_LAT = 21.2758151;
     const OFFICE_LNG = 81.6322723;
     const MAX_DISTANCE = 10;
+    const LOCK_HOURS = 5;
+    const LOCK_MS = LOCK_HOURS * 60 * 60 * 1000;
+    const LOCK_KEY = 'attendanceLockUntil';
 
     let db = null;
 
@@ -220,6 +223,53 @@
         showStatus('Supabase did not load. Check your internet connection.', 'error');
         return false;
       }
+      return true;
+    }
+
+    // --- Device lock helpers (5 hours per device) ---
+    function getLockUntil() {
+      const raw = localStorage.getItem(LOCK_KEY);
+      if (!raw) return null;
+      const ts = Number(raw);
+      return Number.isFinite(ts) ? ts : null;
+    }
+
+    function isDeviceLocked() {
+      const until = getLockUntil();
+      return until !== null && Date.now() < until;
+    }
+
+    function getRemainingLockText() {
+      const until = getLockUntil();
+      if (!until || Date.now() >= until) return '';
+
+      const remainingMs = until - Date.now();
+      const totalMinutes = Math.ceil(remainingMs / 60000);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      if (hours > 0) {
+        return hours + ' hr ' + minutes + ' min';
+      }
+      return minutes + ' min';
+    }
+
+    function setDeviceLock() {
+      localStorage.setItem(LOCK_KEY, String(Date.now() + LOCK_MS));
+    }
+
+    function applyLockUI() {
+      if (!isDeviceLocked()) return false;
+
+      presentBtn.disabled = true;
+      leaveBtn.disabled = true;
+      leaveSection.classList.remove('show');
+      employeeSelect.disabled = true;
+
+      showStatus(
+        'This device is locked for <strong>' + getRemainingLockText() + '</strong>.<br>Attendance was already marked from this phone. Please try again later or use a different device.',
+        'error'
+      );
       return true;
     }
 
@@ -285,6 +335,8 @@
     }
 
     function showLeaveForm() {
+      if (applyLockUI()) return;
+
       const emp = getSelectedEmployee();
 
       if (!emp) {
@@ -306,14 +358,24 @@
         return false;
       }
 
-      showStatus(successMessage, 'success');
+      // Lock this device for 5 hours after successful mark
+      setDeviceLock();
+
+      showStatus(
+        successMessage +
+        '<br><br><strong>This device is now locked for ' + LOCK_HOURS + ' hours.</strong>',
+        'success'
+      );
       presentBtn.disabled = true;
       leaveBtn.disabled = true;
+      employeeSelect.disabled = true;
       leaveSection.classList.remove('show');
       return true;
     }
 
     async function markPresent() {
+      if (applyLockUI()) return;
+
       const emp = getSelectedEmployee();
 
       if (!emp) {
@@ -330,6 +392,9 @@
 
       navigator.geolocation.getCurrentPosition(
         async function (position) {
+          // Re-check lock in case time passed while waiting for GPS
+          if (applyLockUI()) return;
+
           const userLat = position.coords.latitude;
           const userLng = position.coords.longitude;
           const distance = getDistance(userLat, userLng, OFFICE_LAT, OFFICE_LNG);
@@ -367,6 +432,8 @@
     }
 
     async function markLeave() {
+      if (applyLockUI()) return;
+
       const emp = getSelectedEmployee();
 
       if (!emp) {
@@ -414,12 +481,23 @@
       document.getElementById('submitLeaveBtn').addEventListener('click', markLeave);
 
       employeeSelect.addEventListener('change', function () {
+        if (isDeviceLocked()) {
+          applyLockUI();
+          return;
+        }
         statusEl.style.display = 'none';
         presentBtn.disabled = false;
         leaveBtn.disabled = false;
         leaveSection.classList.remove('show');
         reasonInput.value = '';
       });
+
+      // If this device is already locked, show lock message immediately
+      if (applyLockUI()) {
+        // still load names so UI looks complete, but actions stay blocked
+        loadEmployees();
+        return;
+      }
 
       loadEmployees();
     }
