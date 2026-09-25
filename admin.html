@@ -1,310 +1,338 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Prithvi Realcon Transport</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-      min-height: 100vh;
-      padding: 20px;
-    }
-    #loginScreen {
-      max-width: 360px;
-      margin: 80px auto;
-      background: #1e293b;
-      border: 1px solid #334155;
-      padding: 36px 28px;
-      border-radius: 16px;
-      text-align: center;
-    }
-    #loginScreen .company {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      color: #818cf8;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    #loginScreen h1 {
-      font-size: 22px;
-      margin-bottom: 6px;
-    }
-    #loginScreen p {
-      color: #94a3b8;
-      font-size: 13px;
-      margin-bottom: 22px;
-    }
-    #loginScreen input {
-      width: 100%;
-      padding: 13px 16px;
-      border: 1px solid #475569;
-      border-radius: 10px;
-      font-size: 15px;
-      margin-bottom: 14px;
-      background: #0f172a;
-      color: #f8fafc;
-    }
-    #loginScreen input:focus {
-      outline: none;
-      border-color: #6366f1;
-    }
-    #loginScreen button {
-      width: 100%;
-      padding: 13px;
-      background: #6366f1;
-      color: #fff;
-      border: 0;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    #loginError {
-      color: #fca5a5;
-      margin-top: 12px;
-      font-size: 13px;
-      display: none;
-    }
-    #dashboard { display: none; max-width: 960px; margin: 0 auto; }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 22px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    header h1 { font-size: 20px; font-weight: 700; }
-    .header-left { display: flex; flex-direction: column; gap: 2px; }
-    .header-left .company {
-      font-size: 11px;
-      color: #818cf8;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    .logout-btn {
-      background: #ef4444;
-      color: #fff;
-      border: 0;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .back-link {
-      color: #64748b;
-      text-decoration: none;
-      font-size: 13px;
-      margin-right: 12px;
-    }
-    .back-link:hover { color: #94a3b8; }
-    .section {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 18px;
-    }
-    .section h2 {
-      font-size: 15px;
-      color: #cbd5e1;
-      margin-bottom: 14px;
-      font-weight: 600;
-    }
-    .add-form {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .add-form input {
-      flex: 1;
-      min-width: 160px;
-      padding: 11px 14px;
-      border: 1px solid #475569;
-      border-radius: 8px;
-      font-size: 14px;
-      background: #0f172a;
-      color: #f8fafc;
-    }
-    .add-form input:focus { outline: none; border-color: #6366f1; }
-    .add-form button {
-      background: #22c55e;
-      color: #fff;
-      border: 0;
-      border-radius: 8px;
-      padding: 11px 18px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .filters {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-      align-items: center;
-    }
-    .filters input, .filters select {
-      padding: 9px 12px;
-      border: 1px solid #475569;
-      border-radius: 8px;
-      font-size: 13px;
-      background: #0f172a;
-      color: #f8fafc;
-    }
-    .filters button {
-      padding: 9px 14px;
-      background: #6366f1;
-      color: #fff;
-      border: 0;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .secondary-btn { background: #475569 !important; }
-    .table-wrap { overflow-x: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th, td {
-      padding: 11px 10px;
-      text-align: left;
-      border-bottom: 1px solid #334155;
-      vertical-align: middle;
-    }
-    th {
-      background: #0f172a;
-      color: #94a3b8;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    tr:hover { background: rgba(255,255,255,0.03); }
-    .status-sign_in, .status-sign_out {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .status-sign_in { background: rgba(34,197,94,0.2); color: #86efac; }
-    .status-sign_out { background: rgba(59,130,246,0.2); color: #93c5fd; }
-    .edit-btn, .delete-btn {
-      color: #fff;
-      border: 0;
-      padding: 6px 11px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .edit-btn { background: #3b82f6; }
-    .delete-btn { background: #ef4444; margin-left: 4px; }
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15,23,42,0.75);
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 20px;
-    }
-    .modal.show { display: flex; }
-    .modal-content {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 24px;
-      width: 100%;
-      max-width: 360px;
-    }
-    .modal-content h3 { margin-bottom: 16px; font-size: 17px; }
-    .modal-content label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 600;
-      font-size: 13px;
-      color: #94a3b8;
-    }
-    .modal-content input, .modal-content select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #475569;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      font-size: 14px;
-      background: #0f172a;
-      color: #f8fafc;
-    }
-    .modal-content input:focus, .modal-content select:focus {
-      outline: none;
-      border-color: #6366f1;
-    }
-    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
-    .modal-actions button {
-      flex: 1;
-      padding: 11px;
-      border: 0;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .btn-save { background: #22c55e; color: #fff; }
-    .btn-cancel { background: #475569; color: #f8fafc; }
-    .msg {
-      margin-top: 12px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      display: none;
-    }
-    .msg.success { background: rgba(34,197,94,0.15); color: #86efac; }
-    .msg.error { background: rgba(239,68,68,0.15); color: #fca5a5; }
-    @media (max-width: 640px) {
-      body { padding: 12px; }
-      #loginScreen { margin-top: 48px; }
-      .section { padding: 16px; }
-      .filters input, .filters select, .filters button,
-      .add-form input, .add-form button { width: 100%; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Prithvi Realcon Transport</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#10151c;
+    --panel:#171e27;
+    --panel-raised:#1f2830;
+    --line:#2a3542;
+    --amber:#f2a93b;
+    --amber-dim:#c98b2c;
+    --steel:#5b8fb0;
+    --steel-dim:#3f6a86;
+    --success:#6fa97a;
+    --danger:#e2604f;
+    --text:#edf1f5;
+    --muted:#8996a3;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 64px),
+      linear-gradient(180deg,#0c1015 0%, var(--ink) 45%);
+    color:var(--text);
+    min-height:100vh;
+    padding:24px;
+  }
+
+  /* ---- shared plate card ---- */
+  .plate-card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,0.6);
+  }
+  .stripe{ height:6px; background:repeating-linear-gradient(45deg, var(--amber) 0 10px, var(--ink) 10px 20px); }
+  .plate-label{
+    text-align:center;
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:1.5px;
+    color:var(--amber);
+    text-transform:uppercase;
+  }
+
+  /* ---- login ---- */
+  #loginScreen{ max-width:360px; margin:96px auto; }
+  #loginScreen .content{ padding:30px 26px; text-align:center; }
+  #loginScreen h1{ font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:22px; margin:14px 0 4px; }
+  #loginScreen p{ color:var(--muted); font-size:13px; margin-bottom:20px; }
+  #loginScreen input{
+    width:100%;
+    padding:13px 16px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    font-size:15px;
+    margin-bottom:14px;
+    background:#0f151c;
+    color:var(--text);
+    font-family:inherit;
+  }
+  #loginScreen input:focus-visible{ outline:2px solid var(--steel); outline-offset:1px; border-color:var(--steel); }
+  #loginScreen button{
+    width:100%;
+    padding:13px;
+    background:var(--amber);
+    color:#1a1204;
+    border:0;
+    border-radius:10px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  #loginScreen button:hover{ filter:brightness(1.08); }
+  #loginError{ color:var(--danger); margin-top:12px; font-size:13px; display:none; }
+
+  /* ---- dashboard shell ---- */
+  #dashboard{ display:none; max-width:1000px; margin:0 auto; }
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header h1{ font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:22px; }
+  .header-left{ display:flex; flex-direction:column; gap:2px; }
+  .header-left .company{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:12px;
+    color:var(--amber);
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+  .logout-btn{
+    background:var(--danger);
+    color:#fff;
+    border:0;
+    padding:10px 16px;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:13px;
+    font-family:inherit;
+  }
+  .logout-btn:hover{ filter:brightness(1.08); }
+  .back-link{ color:var(--muted); text-decoration:none; font-size:13px; margin-right:12px; }
+  .back-link:hover{ color:var(--text); }
+
+  /* ---- stat strip ---- */
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px; }
+  .stat{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px 18px;
+  }
+  .stat .num{ font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:30px; font-variant-numeric:tabular-nums; }
+  .stat.in .num{ color:var(--amber); }
+  .stat.out .num{ color:var(--steel); }
+  .stat .cap{ margin-top:2px; font-size:12.5px; color:var(--muted); }
+
+  .section{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:18px;
+  }
+  .section h2{ font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:600; color:var(--text); margin-bottom:14px; }
+
+  .add-form{ display:flex; gap:10px; flex-wrap:wrap; }
+  .add-form input{
+    flex:1; min-width:160px;
+    padding:11px 14px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:14px;
+    background:#0f151c;
+    color:var(--text);
+    font-family:inherit;
+  }
+  .add-form input:focus-visible{ outline:2px solid var(--steel); outline-offset:1px; border-color:var(--steel); }
+  .add-form button{
+    background:var(--amber);
+    color:#1a1204;
+    border:0;
+    border-radius:8px;
+    padding:11px 18px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:14px;
+    font-family:inherit;
+  }
+  .add-form button:hover{ filter:brightness(1.08); }
+
+  .filters{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+  .filters input, .filters select{
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    background:#0f151c;
+    color:var(--text);
+    font-family:inherit;
+  }
+  .filters button{
+    padding:9px 14px;
+    background:var(--steel);
+    color:#0c1116;
+    border:0;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:13px;
+    font-family:inherit;
+  }
+  .filters button:hover{ filter:brightness(1.1); }
+  .secondary-btn{ background:var(--panel-raised) !important; color:var(--text) !important; border:1px solid var(--line) !important; }
+
+  .table-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th, td{ padding:11px 10px; text-align:left; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th{
+    background:#0f151c;
+    color:var(--muted);
+    font-weight:600;
+    white-space:nowrap;
+    font-family:'Barlow Condensed',sans-serif;
+    letter-spacing:.3px;
+    font-size:13px;
+  }
+  td{ font-variant-numeric:tabular-nums; }
+  tr:hover{ background:rgba(255,255,255,0.025); }
+
+  .status-sign_in, .status-sign_out{
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .status-sign_in{ background:rgba(242,169,59,0.16); color:var(--amber); }
+  .status-sign_out{ background:rgba(91,143,176,0.18); color:var(--steel); }
+
+  .edit-btn, .delete-btn{
+    color:#fff;
+    border:0;
+    padding:6px 11px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:12px;
+    font-weight:600;
+    font-family:inherit;
+  }
+  .edit-btn{ background:var(--steel-dim); }
+  .edit-btn:hover{ filter:brightness(1.15); }
+  .delete-btn{ background:var(--danger); margin-left:4px; }
+  .delete-btn:hover{ filter:brightness(1.1); }
+
+  .modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(10,14,19,0.75);
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .modal.show{ display:flex; }
+  .modal-content{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:24px;
+    width:100%;
+    max-width:360px;
+  }
+  .modal-content h3{ font-family:'Barlow Condensed',sans-serif; font-weight:600; margin-bottom:16px; font-size:18px; }
+  .modal-content label{ display:block; margin-bottom:5px; font-weight:600; font-size:13px; color:var(--muted); }
+  .modal-content input, .modal-content select{
+    width:100%;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    margin-bottom:12px;
+    font-size:14px;
+    background:#0f151c;
+    color:var(--text);
+    font-family:inherit;
+  }
+  .modal-content input:focus-visible, .modal-content select:focus-visible{
+    outline:2px solid var(--steel); outline-offset:1px; border-color:var(--steel);
+  }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+  .modal-actions button{
+    flex:1; padding:11px; border:0; border-radius:8px;
+    font-weight:600; cursor:pointer; font-size:14px; font-family:inherit;
+  }
+  .btn-save{ background:var(--success); color:#0c1a10; }
+  .btn-save:hover{ filter:brightness(1.1); }
+  .btn-cancel{ background:var(--panel-raised); color:var(--text); border:1px solid var(--line) !important; }
+
+  .msg{ margin-top:12px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .msg.success{ background:rgba(111,169,122,0.15); color:var(--success); }
+  .msg.error{ background:rgba(226,96,79,0.15); color:var(--danger); }
+
+  @media (max-width: 640px){
+    body{ padding:14px; }
+    #loginScreen{ margin-top:48px; }
+    .section{ padding:16px; }
+    .stats{ grid-template-columns:1fr; }
+    .filters input, .filters select, .filters button,
+    .add-form input, .add-form button{ width:100%; }
+  }
+</style>
 </head>
 <body>
-  <div id="loginScreen">
-    <div class="company">Prithvi Realcon Transport Private Limited</div>
-    <h1>Admin Login</h1>
-    <p>Enter password to continue</p>
-    <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
-    <button id="loginBtn" type="button">Login</button>
-    <div id="loginError">Wrong password</div>
+  <div id="loginScreen" class="plate-card">
+    <div class="stripe"></div>
+    <div class="content">
+      <div class="plate-label">Prithvi Realcon Transport</div>
+      <h1>Admin login</h1>
+      <p>Enter password to continue</p>
+      <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+      <button id="loginBtn" type="button">Log in</button>
+      <div id="loginError">Wrong password</div>
+    </div>
   </div>
 
   <div id="dashboard">
     <header>
       <div class="header-left">
         <div class="company">Prithvi Realcon Transport Pvt. Ltd.</div>
-        <h1>Attendance Admin</h1>
+        <h1>Dispatch console</h1>
       </div>
       <div>
         <a href="index.html" class="back-link">← Employee</a>
-        <button class="logout-btn" id="logoutBtn" type="button">Logout</button>
+        <button class="logout-btn" id="logoutBtn" type="button">Log out</button>
       </div>
     </header>
 
+    <div class="stats">
+      <div class="stat in">
+        <div class="num" id="statSignIns">–</div>
+        <div class="cap">Signed in today</div>
+      </div>
+      <div class="stat out">
+        <div class="num" id="statSignOuts">–</div>
+        <div class="cap">Signed out today</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="statEmployees">–</div>
+        <div class="cap">Employees on file</div>
+      </div>
+    </div>
+
     <div class="section">
-      <h2>Add Employee</h2>
+      <h2>Add employee</h2>
       <div class="add-form">
         <input type="text" id="newEmpName" placeholder="Employee name">
         <button id="addEmployeeBtn" type="button">Add</button>
@@ -313,11 +341,11 @@
     </div>
 
     <div class="section">
-      <h2>Attendance Records</h2>
+      <h2>Attendance records</h2>
       <div class="filters">
         <input type="date" id="filterDate">
         <select id="filterStatus">
-          <option value="">All Status</option>
+          <option value="">All status</option>
           <option value="sign_in">Sign In</option>
           <option value="sign_out">Sign Out</option>
         </select>
@@ -336,7 +364,7 @@
             </tr>
           </thead>
           <tbody id="attendanceBody">
-            <tr><td colspan="5" style="text-align:center;color:#64748b;">Login to load records</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);">Log in to load records</td></tr>
           </tbody>
         </table>
       </div>
@@ -345,7 +373,7 @@
 
   <div class="modal" id="editModal">
     <div class="modal-content">
-      <h3>Edit Attendance</h3>
+      <h3>Edit attendance</h3>
       <input type="hidden" id="editId">
       <label for="editDate">Date</label>
       <input type="date" id="editDate">
@@ -389,6 +417,7 @@
       loginScreen.style.display = 'none';
       dashboard.style.display = 'block';
       loadAttendance();
+      loadStats();
     }
 
     function showMessage(el, type, text) {
@@ -442,6 +471,7 @@
       showMessage(msg, 'success', '"' + name + '" added');
       nameInput.value = '';
       setTimeout(() => { msg.style.display = 'none'; }, 2500);
+      loadStats();
     }
 
     function statusLabel(status) {
@@ -453,9 +483,22 @@
       return status === 'sign_out' ? 'sign_out' : 'sign_in';
     }
 
+    async function loadStats() {
+      if (!db) return;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const [{ count: signInCount }, { count: signOutCount }, { count: empCount }] = await Promise.all([
+        db.from('attendance').select('*', { count: 'exact', head: true }).eq('date', todayStr).eq('status', 'sign_in'),
+        db.from('attendance').select('*', { count: 'exact', head: true }).eq('date', todayStr).eq('status', 'sign_out'),
+        db.from('employees').select('*', { count: 'exact', head: true })
+      ]);
+      document.getElementById('statSignIns').textContent = signInCount ?? '–';
+      document.getElementById('statSignOuts').textContent = signOutCount ?? '–';
+      document.getElementById('statEmployees').textContent = empCount ?? '–';
+    }
+
     async function loadAttendance() {
       if (!requireSupabase()) return;
-      attendanceBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">Loading...</td></tr>';
+      attendanceBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);">Loading…</td></tr>';
       let query = db.from('attendance').select('*')
         .order('date', { ascending: false })
         .order('time', { ascending: false });
@@ -465,11 +508,11 @@
       if (filterStatus) query = query.eq('status', filterStatus);
       const { data, error } = await query;
       if (error) {
-        attendanceBody.innerHTML = '<tr><td colspan="5" style="color:#fca5a5;">Error: ' + escapeHtml(error.message) + '</td></tr>';
+        attendanceBody.innerHTML = '<tr><td colspan="5" style="color:var(--danger);">Error: ' + escapeHtml(error.message) + '</td></tr>';
         return;
       }
       if (!data || data.length === 0) {
-        attendanceBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">No records found</td></tr>';
+        attendanceBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);">No records found</td></tr>';
         return;
       }
       attendanceBody.innerHTML = '';
@@ -524,6 +567,7 @@
       }
       closeModal();
       loadAttendance();
+      loadStats();
     }
 
     async function deleteRecord(id) {
@@ -535,6 +579,7 @@
         return;
       }
       loadAttendance();
+      loadStats();
     }
 
     function setupApp() {
