@@ -1,167 +1,253 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Attendance - Prithvi Realcon Transport</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      color: #f8fafc;
-    }
-    .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 16px;
-      padding: 28px 24px;
-      width: 100%;
-      max-width: 400px;
-    }
-    .company {
-      text-align: center;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.6px;
-      color: #818cf8;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    h1 {
-      text-align: center;
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .subtitle {
-      text-align: center;
-      color: #94a3b8;
-      font-size: 13px;
-      margin-bottom: 24px;
-    }
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 600;
-      color: #cbd5e1;
-      font-size: 13px;
-    }
-    select {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1px solid #475569;
-      border-radius: 10px;
-      font-size: 15px;
-      margin-bottom: 18px;
-      background: #0f172a;
-      color: #f8fafc;
-      font-family: inherit;
-    }
-    select:focus { outline: none; border-color: #6366f1; }
-    .btn-group {
-      display: flex;
-      gap: 12px;
-      margin-top: 4px;
-    }
-    button {
-      flex: 1;
-      padding: 14px;
-      border: 0;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity 0.15s;
-    }
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .btn-signin {
-      background: #22c55e;
-      color: #fff;
-    }
-    .btn-signout {
-      background: #3b82f6;
-      color: #fff;
-    }
-    #status {
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 10px;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 500;
-      display: none;
-      line-height: 1.5;
-    }
-    .success {
-      background: rgba(34, 197, 94, 0.15);
-      color: #86efac;
-      border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-    .error {
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-    .info {
-      background: rgba(99, 102, 241, 0.15);
-      color: #a5b4fc;
-      border: 1px solid rgba(99, 102, 241, 0.3);
-    }
-    .admin-link {
-      display: block;
-      margin-top: 22px;
-      text-align: center;
-      color: #64748b;
-      text-decoration: none;
-      font-size: 12px;
-    }
-    .admin-link:hover { color: #94a3b8; }
-    .locked-msg {
-      text-align: center;
-      color: #fca5a5;
-      font-size: 13px;
-      margin-bottom: 16px;
-      padding: 12px;
-      background: rgba(239, 68, 68, 0.1);
-      border-radius: 8px;
-      border: 1px solid rgba(239, 68, 68, 0.25);
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance — Prithvi Realcon Transport</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#10151c;
+    --panel:#171e27;
+    --panel-raised:#1f2830;
+    --line:#2a3542;
+    --amber:#f2a93b;
+    --amber-dim:#c98b2c;
+    --steel:#5b8fb0;
+    --steel-dim:#3f6a86;
+    --success:#6fa97a;
+    --danger:#e2604f;
+    --text:#edf1f5;
+    --muted:#8996a3;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 64px),
+      linear-gradient(180deg,#0c1015 0%, var(--ink) 45%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    color:var(--text);
+  }
+  .card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    width:100%;
+    max-width:400px;
+    overflow:hidden;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,0.6);
+    animation:rise .5s ease both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){ .card{animation:none;} }
+
+  .stripe{
+    height:6px;
+    background:repeating-linear-gradient(45deg, var(--amber) 0 10px, var(--ink) 10px 20px);
+  }
+  .rivet{
+    position:absolute;
+    width:6px;height:6px;
+    border-radius:50%;
+    background:var(--panel-raised);
+    box-shadow:inset 0 1px 1px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .rivet.tl{top:16px;left:14px;} .rivet.tr{top:16px;right:14px;}
+  .rivet.bl{bottom:16px;left:14px;} .rivet.br{bottom:16px;right:14px;}
+
+  .content{ padding:30px 26px 26px; }
+
+  .plate{
+    text-align:center;
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:1.5px;
+    color:var(--amber);
+    text-transform:uppercase;
+  }
+  .plate small{
+    display:block;
+    margin-top:2px;
+    font-family:'Inter',sans-serif;
+    font-weight:400;
+    font-size:11px;
+    letter-spacing:0.2px;
+    color:var(--muted);
+    text-transform:none;
+  }
+
+  .clock-wrap{ margin:22px 0 18px; text-align:center; }
+  .flip-clock{ display:flex; align-items:center; justify-content:center; gap:5px; }
+  .flip-unit{
+    position:relative;
+    background:#0c1116;
+    border-radius:6px;
+    padding:8px 5px;
+    min-width:30px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:30px;
+    line-height:1;
+    color:var(--amber);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.4);
+    font-variant-numeric: tabular-nums;
+  }
+  .flip-unit::after{
+    content:'';
+    position:absolute; left:2px; right:2px; top:50%;
+    height:1px; background:rgba(0,0,0,0.55);
+  }
+  .flip-colon{ font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:22px; color:var(--muted); }
+  .date-line{ margin-top:10px; font-size:13px; color:var(--muted); }
+  .greeting{ margin-top:2px; font-size:13px; color:var(--text); font-weight:500; }
+
+  .divider{ height:1px; background:var(--line); margin:20px 0; }
+
+  h1.section-title{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:600;
+    font-size:19px;
+    margin-bottom:2px;
+  }
+  .subtitle{ color:var(--muted); font-size:13px; margin-bottom:18px; }
+
+  label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:600;
+    color:#cbd5e1;
+    font-size:12.5px;
+  }
+  select{
+    width:100%;
+    padding:12px 40px 12px 14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    font-size:15px;
+    margin-bottom:16px;
+    background:#0f151c url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%238996a3' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+    color:var(--text);
+    font-family:inherit;
+    appearance:none;
+  }
+  select:focus-visible{ outline:2px solid var(--steel); outline-offset:1px; border-color:var(--steel); }
+  select:disabled{ opacity:.5; }
+
+  .btn-group{ display:flex; gap:10px; }
+  button{
+    flex:1;
+    padding:14px 10px;
+    border-radius:10px;
+    font-size:15px;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:filter .15s, opacity .15s;
+  }
+  button:focus-visible{ outline:2px solid var(--text); outline-offset:2px; }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button:not(:disabled):hover{ filter:brightness(1.08); }
+  .btn-signin{ background:var(--amber); color:#1a1204; }
+  .btn-signout{ background:transparent; color:var(--steel); border-color:var(--steel-dim); }
+
+  .hint{ margin-top:10px; font-size:12px; color:var(--muted); text-align:center; min-height:14px; }
+
+  #status{
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:10px;
+    border-top:2px dashed var(--line);
+    border-radius:0 0 10px 10px;
+    background:var(--panel-raised);
+    font-size:13.5px;
+    line-height:1.6;
+    display:none;
+    animation:slip .3s ease both;
+  }
+  @keyframes slip{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){ #status{animation:none;} }
+  #status.success{ color:var(--success); }
+  #status.error{ color:var(--danger); }
+  #status.info{ color:var(--steel); }
+  #status strong{ color:var(--text); }
+
+  .locked-msg{
+    text-align:center;
+    color:var(--danger);
+    font-size:13px;
+    margin-bottom:16px;
+    padding:12px;
+    background:rgba(226,96,79,0.1);
+    border-radius:8px;
+    border:1px solid rgba(226,96,79,0.25);
+    display:none;
+  }
+
+  .admin-link{
+    display:block;
+    margin-top:22px;
+    text-align:center;
+    color:var(--muted);
+    text-decoration:none;
+    font-size:12px;
+  }
+  .admin-link:hover{ color:var(--text); }
+</style>
 </head>
 <body>
   <div class="card">
-    <div class="company">Prithvi Realcon Transport Private Limited</div>
-    <h1>Attendance</h1>
-    <p class="subtitle">Mark your attendance</p>
+    <div class="rivet tl"></div><div class="rivet tr"></div>
+    <div class="rivet bl"></div><div class="rivet br"></div>
+    <div class="stripe"></div>
 
-    <div id="lockedMsg" class="locked-msg">
-      Attendance already marked from this device today.
+    <div class="content">
+      <div class="plate">
+        Prithvi Realcon Transport
+        <small>Road &amp; rail logistics</small>
+      </div>
+
+      <div class="clock-wrap">
+        <div class="flip-clock" id="flipClock"></div>
+        <div class="date-line" id="dateLine"></div>
+        <div class="greeting" id="greetingLine"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h1 class="section-title">Mark attendance</h1>
+      <p class="subtitle">Select your name to sign in or out</p>
+
+      <div id="lockedMsg" class="locked-msg">
+        Both sign in and sign out are already recorded on this device today.
+      </div>
+
+      <label for="employeeSelect">Your name</label>
+      <select id="employeeSelect">
+        <option value="">Loading…</option>
+      </select>
+
+      <div class="btn-group" id="btnGroup">
+        <button class="btn-signin" id="signInBtn" type="button">Sign In</button>
+        <button class="btn-signout" id="signOutBtn" type="button" style="display:none;">Sign Out</button>
+      </div>
+      <div class="hint" id="hintLine"></div>
+
+      <div id="status"></div>
+      <a href="admin.html" class="admin-link">Admin login →</a>
     </div>
-
-    <label for="employeeSelect">Select Your Name</label>
-    <select id="employeeSelect">
-      <option value="">Loading...</option>
-    </select>
-
-    <div class="btn-group" id="btnGroup">
-      <button class="btn-signin" id="signInBtn" type="button">Sign In</button>
-      <button class="btn-signout" id="signOutBtn" type="button" style="display:none;">Sign Out</button>
-    </div>
-
-    <div id="status"></div>
-    <a href="admin.html" class="admin-link">Admin Login →</a>
   </div>
 
   <script>
@@ -170,7 +256,8 @@
     const OFFICE_LAT = 21.2758151;
     const OFFICE_LNG = 81.6322723;
     const MAX_DISTANCE = 10;
-    const LOCK_KEY = 'attendanceLockUntil';
+    const LOCK_SIGNIN_KEY = 'attendanceLock_signin';
+    const LOCK_SIGNOUT_KEY = 'attendanceLock_signout';
 
     let db = null;
     const employeeSelect = document.getElementById('employeeSelect');
@@ -178,6 +265,7 @@
     const signInBtn = document.getElementById('signInBtn');
     const signOutBtn = document.getElementById('signOutBtn');
     const lockedMsg = document.getElementById('lockedMsg');
+    const hintLine = document.getElementById('hintLine');
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -202,48 +290,70 @@
       return true;
     }
 
-    // Lock until next midnight (local time)
-    function getLockUntil() {
-      const raw = localStorage.getItem(LOCK_KEY);
+    // ---- Live departure-board clock ----
+    const flipClock = document.getElementById('flipClock');
+    const dateLine = document.getElementById('dateLine');
+    const greetingLine = document.getElementById('greetingLine');
+
+    function renderClock() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      const chars = [hh[0], hh[1], ':', mm[0], mm[1], ':', ss[0], ss[1]];
+      flipClock.innerHTML = chars.map(c =>
+        c === ':' ? '<span class="flip-colon">:</span>' : '<span class="flip-unit">' + c + '</span>'
+      ).join('');
+      dateLine.textContent = now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+      const h = now.getHours();
+      greetingLine.textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+      refreshAvailability();
+    }
+
+    // ---- Lock handling: sign-in and sign-out are locked independently ----
+    function getLockUntil(key) {
+      const raw = localStorage.getItem(key);
       if (!raw) return null;
       const ts = Number(raw);
       return Number.isFinite(ts) ? ts : null;
     }
-
-    function isDeviceLocked() {
-      const until = getLockUntil();
+    function isLocked(key) {
+      const until = getLockUntil(key);
       return until !== null && Date.now() < until;
     }
-
-    function setDeviceLock() {
+    function setLock(key) {
       const now = new Date();
       const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0); // next midnight
-      localStorage.setItem(LOCK_KEY, String(midnight.getTime()));
-    }
-
-    function applyLockUI() {
-      if (!isDeviceLocked()) {
-        lockedMsg.style.display = 'none';
-        return false;
-      }
-      signInBtn.disabled = true;
-      signOutBtn.disabled = true;
-      employeeSelect.disabled = true;
-      lockedMsg.style.display = 'block';
-      return true;
+      midnight.setHours(24, 0, 0, 0);
+      localStorage.setItem(key, String(midnight.getTime()));
     }
 
     function updateButtonsByTime() {
       const hour = new Date().getHours();
-      if (hour < 13) {
-        // Before 1 PM → only Sign In
-        signInBtn.style.display = 'block';
-        signOutBtn.style.display = 'none';
+      signOutBtn.style.display = hour < 13 ? 'none' : 'block';
+    }
+
+    function refreshAvailability() {
+      updateButtonsByTime();
+      const signInLocked = isLocked(LOCK_SIGNIN_KEY);
+      const signOutVisible = signOutBtn.style.display !== 'none';
+      const signOutLocked = isLocked(LOCK_SIGNOUT_KEY);
+
+      signInBtn.disabled = signInLocked;
+      signOutBtn.disabled = signOutLocked;
+
+      const fullyDone = signInLocked && (!signOutVisible || signOutLocked);
+      lockedMsg.style.display = fullyDone ? 'block' : 'none';
+      employeeSelect.disabled = fullyDone;
+
+      if (fullyDone) {
+        hintLine.textContent = '';
+      } else if (signInLocked && signOutVisible && !signOutLocked) {
+        hintLine.textContent = 'Signed in for today — sign out is still open.';
+      } else if (!signInLocked && !signOutVisible) {
+        hintLine.textContent = 'Sign out opens after 1 PM.';
       } else {
-        // After 1 PM → both
-        signInBtn.style.display = 'block';
-        signOutBtn.style.display = 'block';
+        hintLine.textContent = '';
       }
     }
 
@@ -265,7 +375,7 @@
 
     async function loadEmployees() {
       if (!requireSupabase()) return;
-      employeeSelect.innerHTML = '<option value="">Loading...</option>';
+      employeeSelect.innerHTML = '<option value="">Loading…</option>';
       const { data, error } = await db.from('employees').select('id, name').order('name');
       if (error) {
         employeeSelect.innerHTML = '<option value="">Error loading</option>';
@@ -286,7 +396,7 @@
       });
     }
 
-    async function saveAttendance(status, successMsg) {
+    async function saveAttendance(status, successMsg, lockKey) {
       if (!requireSupabase()) return false;
       const emp = getSelectedEmployee();
       if (!emp) {
@@ -312,14 +422,14 @@
         return false;
       }
 
-      setDeviceLock();
-      applyLockUI();
+      setLock(lockKey);
+      refreshAvailability();
       showStatus(successMsg + '<br><strong>' + escapeHtml(emp.name) + '</strong><br>' + dateStr + ' · ' + timeStr, 'success');
       return true;
     }
 
     async function markSignIn() {
-      if (applyLockUI()) return;
+      if (isLocked(LOCK_SIGNIN_KEY)) { refreshAvailability(); return; }
       const emp = getSelectedEmployee();
       if (!emp) {
         showStatus('Please select your name first.', 'error');
@@ -329,16 +439,16 @@
         showStatus('Location not supported on this device.', 'error');
         return;
       }
-      showStatus('Checking location...', 'info');
+      showStatus('Checking location…', 'info');
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
-          if (applyLockUI()) return;
+          if (isLocked(LOCK_SIGNIN_KEY)) { refreshAvailability(); return; }
           const dist = getDistance(pos.coords.latitude, pos.coords.longitude, OFFICE_LAT, OFFICE_LNG);
           if (dist > MAX_DISTANCE) {
             showStatus('You are too far from office (' + Math.round(dist) + ' m). Sign In only allowed at office.', 'error');
             return;
           }
-          await saveAttendance('sign_in', 'Sign In successful');
+          await saveAttendance('sign_in', 'Sign In successful', LOCK_SIGNIN_KEY);
         },
         () => showStatus('Location access denied. Please allow location.', 'error'),
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
@@ -346,8 +456,8 @@
     }
 
     async function markSignOut() {
-      if (applyLockUI()) return;
-      await saveAttendance('sign_out', 'Sign Out successful');
+      if (isLocked(LOCK_SIGNOUT_KEY)) { refreshAvailability(); return; }
+      await saveAttendance('sign_out', 'Sign Out successful', LOCK_SIGNOUT_KEY);
     }
 
     function setupApp() {
@@ -358,24 +468,15 @@
       }
       db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      updateButtonsByTime();
       signInBtn.addEventListener('click', markSignIn);
       signOutBtn.addEventListener('click', markSignOut);
 
       employeeSelect.addEventListener('change', () => {
-        if (isDeviceLocked()) {
-          applyLockUI();
-          return;
-        }
         statusEl.style.display = 'none';
-        signInBtn.disabled = false;
-        signOutBtn.disabled = false;
       });
 
-      if (applyLockUI()) {
-        loadEmployees();
-        return;
-      }
+      renderClock();
+      setInterval(renderClock, 1000);
       loadEmployees();
     }
 
