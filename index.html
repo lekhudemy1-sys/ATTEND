@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Attendance System</title>
+  <title>Attendance - Prithvi Realcon Transport</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -13,101 +14,372 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 20px;
       color: #f8fafc;
-    }
-    .container {
-      text-align: center;
-      max-width: 480px;
-      width: 100%;
-    }
-    .logo {
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      margin: 0 auto 20px;
-      box-shadow: 0 12px 24px rgba(99, 102, 241, 0.25);
-    }
-    h1 {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.4px;
-      margin-bottom: 8px;
-    }
-    .subtitle {
-      color: #94a3b8;
-      font-size: 15px;
-      margin-bottom: 40px;
-    }
-    .cards {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      justify-content: center;
     }
     .card {
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 16px;
-      padding: 32px 24px;
-      width: 200px;
-      text-decoration: none;
-      color: #f8fafc;
-      transition: all 0.2s ease;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 400px;
     }
-    .card:hover {
-      background: #334155;
-      border-color: #6366f1;
-      transform: translateY(-4px);
-      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
-    }
-    .card-icon {
-      font-size: 36px;
-      margin-bottom: 14px;
-    }
-    .card h2 {
-      font-size: 18px;
-      font-weight: 600;
+    .company {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: #818cf8;
+      text-transform: uppercase;
       margin-bottom: 6px;
     }
-    .card p {
-      font-size: 13px;
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      text-align: center;
       color: #94a3b8;
-      line-height: 1.4;
+      font-size: 13px;
+      margin-bottom: 24px;
     }
-    footer {
-      margin-top: 48px;
-      font-size: 12px;
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #cbd5e1;
+      font-size: 13px;
+    }
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      font-size: 15px;
+      margin-bottom: 18px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: inherit;
+    }
+    select:focus { outline: none; border-color: #6366f1; }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    button {
+      flex: 1;
+      padding: 14px;
+      border: 0;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-signin {
+      background: #22c55e;
+      color: #fff;
+    }
+    .btn-signout {
+      background: #3b82f6;
+      color: #fff;
+    }
+    #status {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+      line-height: 1.5;
+    }
+    .success {
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .info {
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    .admin-link {
+      display: block;
+      margin-top: 22px;
+      text-align: center;
       color: #64748b;
+      text-decoration: none;
+      font-size: 12px;
     }
-    @media (max-width: 480px) {
-      .card { width: 100%; }
+    .admin-link:hover { color: #94a3b8; }
+    .locked-msg {
+      text-align: center;
+      color: #fca5a5;
+      font-size: 13px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">📍</div>
-    <h1>Attendance System</h1>
-    <p class="subtitle">Select your role to continue</p>
-    <div class="cards">
-      <a href="user.html" class="card">
-        <div class="card-icon">👤</div>
-        <h2>Employee</h2>
-        <p>Mark present or leave</p>
-      </a>
-      <a href="admin.html" class="card">
-        <div class="card-icon">🔐</div>
-        <h2>Admin</h2>
-        <p>Manage records & staff</p>
-      </a>
+  <div class="card">
+    <div class="company">Prithvi Realcon Transport Private Limited</div>
+    <h1>Attendance</h1>
+    <p class="subtitle">Mark your attendance</p>
+
+    <div id="lockedMsg" class="locked-msg">
+      Attendance already marked from this device today.
     </div>
-    <footer>Location-based • Secure • Powered by Supabase</footer>
+
+    <label for="employeeSelect">Select Your Name</label>
+    <select id="employeeSelect">
+      <option value="">Loading...</option>
+    </select>
+
+    <div class="btn-group" id="btnGroup">
+      <button class="btn-signin" id="signInBtn" type="button">Sign In</button>
+      <button class="btn-signout" id="signOutBtn" type="button" style="display:none;">Sign Out</button>
+    </div>
+
+    <div id="status"></div>
+    <a href="admin.html" class="admin-link">Admin Login →</a>
   </div>
+
+  <script>
+    const SUPABASE_URL = 'https://mwluvdedgdshbdnmyjyl.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_pT4vjOCHqiiqZxZAcxHpjg_neX05R-M';
+    const OFFICE_LAT = 21.2758151;
+    const OFFICE_LNG = 81.6322723;
+    const MAX_DISTANCE = 10;
+    const LOCK_KEY = 'attendanceLockUntil';
+
+    let db = null;
+    const employeeSelect = document.getElementById('employeeSelect');
+    const statusEl = document.getElementById('status');
+    const signInBtn = document.getElementById('signInBtn');
+    const signOutBtn = document.getElementById('signOutBtn');
+    const lockedMsg = document.getElementById('lockedMsg');
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showStatus(message, type) {
+      statusEl.style.display = 'block';
+      statusEl.className = type;
+      statusEl.innerHTML = message;
+    }
+
+    function requireSupabase() {
+      if (!db) {
+        showStatus('Connection failed. Check internet.', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    // Lock until next midnight (local time)
+    function getLockUntil() {
+      const raw = localStorage.getItem(LOCK_KEY);
+      if (!raw) return null;
+      const ts = Number(raw);
+      return Number.isFinite(ts) ? ts : null;
+    }
+
+    function isDeviceLocked() {
+      const until = getLockUntil();
+      return until !== null && Date.now() < until;
+    }
+
+    function setDeviceLock() {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0); // next midnight
+      localStorage.setItem(LOCK_KEY, String(midnight.getTime()));
+    }
+
+    function applyLockUI() {
+      if (!isDeviceLocked()) {
+        lockedMsg.style.display = 'none';
+        return false;
+      }
+      signInBtn.disabled = true;
+      signOutBtn.disabled = true;
+      employeeSelect.disabled = true;
+      lockedMsg.style.display = 'block';
+      return true;
+    }
+
+    function updateButtonsByTime() {
+      const hour = new Date().getHours();
+      if (hour < 13) {
+        // Before 1 PM → only Sign In
+        signInBtn.style.display = 'block';
+        signOutBtn.style.display = 'none';
+      } else {
+        // After 1 PM → both
+        signInBtn.style.display = 'block';
+        signOutBtn.style.display = 'block';
+      }
+    }
+
+    function getSelectedEmployee() {
+      const option = employeeSelect.options[employeeSelect.selectedIndex];
+      if (!employeeSelect.value || !option) return null;
+      return { id: employeeSelect.value, name: option.dataset.name };
+    }
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    async function loadEmployees() {
+      if (!requireSupabase()) return;
+      employeeSelect.innerHTML = '<option value="">Loading...</option>';
+      const { data, error } = await db.from('employees').select('id, name').order('name');
+      if (error) {
+        employeeSelect.innerHTML = '<option value="">Error loading</option>';
+        showStatus('Could not load names.', 'error');
+        return;
+      }
+      if (!data || data.length === 0) {
+        employeeSelect.innerHTML = '<option value="">No employees yet</option>';
+        return;
+      }
+      employeeSelect.innerHTML = '<option value="">Select your name</option>';
+      data.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.id;
+        opt.textContent = emp.name;
+        opt.dataset.name = emp.name;
+        employeeSelect.appendChild(opt);
+      });
+    }
+
+    async function saveAttendance(status, successMsg) {
+      if (!requireSupabase()) return false;
+      const emp = getSelectedEmployee();
+      if (!emp) {
+        showStatus('Please select your name first.', 'error');
+        return false;
+      }
+
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().slice(0, 8);
+
+      const { error } = await db.from('attendance').insert({
+        employee_id: emp.id,
+        employee_name: emp.name,
+        date: dateStr,
+        time: timeStr,
+        status: status,
+        reason: null
+      });
+
+      if (error) {
+        showStatus('Error saving: ' + escapeHtml(error.message), 'error');
+        return false;
+      }
+
+      setDeviceLock();
+      applyLockUI();
+      showStatus(successMsg + '<br><strong>' + escapeHtml(emp.name) + '</strong><br>' + dateStr + ' · ' + timeStr, 'success');
+      return true;
+    }
+
+    async function markSignIn() {
+      if (applyLockUI()) return;
+      const emp = getSelectedEmployee();
+      if (!emp) {
+        showStatus('Please select your name first.', 'error');
+        return;
+      }
+      if (!navigator.geolocation) {
+        showStatus('Location not supported on this device.', 'error');
+        return;
+      }
+      showStatus('Checking location...', 'info');
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (applyLockUI()) return;
+          const dist = getDistance(pos.coords.latitude, pos.coords.longitude, OFFICE_LAT, OFFICE_LNG);
+          if (dist > MAX_DISTANCE) {
+            showStatus('You are too far from office (' + Math.round(dist) + ' m). Sign In only allowed at office.', 'error');
+            return;
+          }
+          await saveAttendance('sign_in', 'Sign In successful');
+        },
+        () => showStatus('Location access denied. Please allow location.', 'error'),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    }
+
+    async function markSignOut() {
+      if (applyLockUI()) return;
+      await saveAttendance('sign_out', 'Sign Out successful');
+    }
+
+    function setupApp() {
+      if (!window.supabase) {
+        showStatus('Library failed to load. Check internet.', 'error');
+        employeeSelect.innerHTML = '<option value="">Failed to load</option>';
+        return;
+      }
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      updateButtonsByTime();
+      signInBtn.addEventListener('click', markSignIn);
+      signOutBtn.addEventListener('click', markSignOut);
+
+      employeeSelect.addEventListener('change', () => {
+        if (isDeviceLocked()) {
+          applyLockUI();
+          return;
+        }
+        statusEl.style.display = 'none';
+        signInBtn.disabled = false;
+        signOutBtn.disabled = false;
+      });
+
+      if (applyLockUI()) {
+        loadEmployees();
+        return;
+      }
+      loadEmployees();
+    }
+
+    window.addEventListener('load', setupApp);
+  </script>
 </body>
 </html>
