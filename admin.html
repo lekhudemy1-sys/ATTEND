@@ -208,7 +208,7 @@
   td{ font-variant-numeric:tabular-nums; }
   tr:hover{ background:rgba(255,255,255,0.025); }
 
-  .status-sign_in, .status-sign_out{
+  .status-sign_in, .status-sign_out, .status-leave{
     padding:4px 10px;
     border-radius:20px;
     font-size:11px;
@@ -217,6 +217,7 @@
   }
   .status-sign_in{ background:rgba(242,169,59,0.16); color:var(--amber); }
   .status-sign_out{ background:rgba(91,143,176,0.18); color:var(--steel); }
+  .status-leave{ background:rgba(226,96,79,0.16); color:var(--danger); }
 
   .edit-btn, .delete-btn{
     color:#fff;
@@ -341,6 +342,30 @@
     </div>
 
     <div class="section">
+      <h2>Employees &amp; working hours</h2>
+      <div class="filters">
+        <input type="date" id="hoursDate">
+        <button id="hoursFilterBtn" type="button">Show hours</button>
+        <button class="secondary-btn" id="hoursTodayBtn" type="button">Today</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Sign In</th>
+              <th>Sign Out</th>
+              <th>Hours worked</th>
+            </tr>
+          </thead>
+          <tbody id="employeesHoursBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Log in to load</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
       <h2>Attendance records</h2>
       <div class="filters">
         <input type="date" id="filterDate">
@@ -348,9 +373,11 @@
           <option value="">All status</option>
           <option value="sign_in">Sign In</option>
           <option value="sign_out">Sign Out</option>
+          <option value="leave">Leave</option>
         </select>
         <button id="filterBtn" type="button">Filter</button>
         <button class="secondary-btn" id="clearBtn" type="button">Clear</button>
+        <button id="exportCsvBtn" type="button" style="background:var(--success);color:#0c1a10;">Export CSV</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -383,6 +410,7 @@
       <select id="editStatus">
         <option value="sign_in">Sign In</option>
         <option value="sign_out">Sign Out</option>
+        <option value="leave">Leave</option>
       </select>
       <div class="modal-actions">
         <button class="btn-save" id="saveEditBtn" type="button">Save</button>
@@ -418,6 +446,9 @@
       dashboard.style.display = 'block';
       loadAttendance();
       loadStats();
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('hoursDate').value = today;
+      loadEmployeesHours(today);
     }
 
     function showMessage(el, type, text) {
@@ -472,15 +503,105 @@
       nameInput.value = '';
       setTimeout(() => { msg.style.display = 'none'; }, 2500);
       loadStats();
+      const d = document.getElementById('hoursDate').value || new Date().toISOString().split('T')[0];
+      loadEmployeesHours(d);
+    }
+
+    function formatDuration(ms) {
+      if (!Number.isFinite(ms) || ms < 0) return '—';
+      const totalMin = Math.floor(ms / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      return h + 'h ' + m + 'm';
+    }
+
+    function parseTimeOnDate(dateStr, timeStr) {
+      if (!dateStr || !timeStr) return null;
+      const parts = timeStr.split(':').map(Number);
+      const d = new Date(dateStr + 'T00:00:00');
+      d.setHours(parts[0] || 0, parts[1] || 0, parts[2] || 0, 0);
+      return d;
+    }
+
+    async function loadEmployeesHours(dateStr) {
+      if (!requireSupabase()) return;
+      const body = document.getElementById('employeesHoursBody');
+      body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);">Loading…</td></tr>';
+
+      const [{ data: emps, error: empErr }, { data: att, error: attErr }] = await Promise.all([
+        db.from('employees').select('id, name').order('name'),
+        db.from('attendance').select('employee_id, employee_name, time, status, reason')
+          .eq('date', dateStr)
+          .order('time', { ascending: true })
+      ]);
+
+      if (empErr || attErr) {
+        body.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Error loading</td></tr>';
+        return;
+      }
+
+      const byEmp = {};
+      (emps || []).forEach(e => {
+        byEmp[e.id] = { name: e.name, signIn: null, signOut: null, onLeave: false, leaveReason: null };
+      });
+
+      (att || []).forEach(row => {
+        // Skip time-change request placeholders
+        if (row.reason && String(row.reason).startsWith('TIME_CHANGE_REQUEST:')) return;
+        const id = row.employee_id;
+        if (!byEmp[id]) {
+          byEmp[id] = { name: row.employee_name || 'Unknown', signIn: null, signOut: null, onLeave: false, leaveReason: null };
+        }
+        if (row.status === 'leave') {
+          byEmp[id].onLeave = true;
+          byEmp[id].leaveReason = row.reason || null;
+        }
+        if (row.status === 'sign_in' && !byEmp[id].signIn) byEmp[id].signIn = row.time;
+        if (row.status === 'sign_out') byEmp[id].signOut = row.time; // last sign-out wins
+      });
+
+      const rows = Object.values(byEmp);
+      if (rows.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);">No employees</td></tr>';
+        return;
+      }
+
+      body.innerHTML = '';
+      rows.forEach(r => {
+        let hours = '—';
+        let signIn = r.signIn || '—';
+        let signOut = r.signOut || '—';
+        if (r.onLeave) {
+          hours = 'On leave' + (r.leaveReason ? ' (' + r.leaveReason + ')' : '');
+          signIn = '—';
+          signOut = '—';
+        } else if (r.signIn && r.signOut) {
+          const inD = parseTimeOnDate(dateStr, r.signIn);
+          const outD = parseTimeOnDate(dateStr, r.signOut);
+          if (inD && outD) hours = formatDuration(outD - inD);
+        } else if (r.signIn && !r.signOut) {
+          hours = 'Still signed in';
+        }
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td><strong>' + escapeHtml(r.name) + '</strong></td>' +
+          '<td>' + escapeHtml(signIn) + '</td>' +
+          '<td>' + escapeHtml(signOut) + '</td>' +
+          '<td>' + escapeHtml(hours) + '</td>';
+        body.appendChild(tr);
+      });
     }
 
     function statusLabel(status) {
       if (status === 'sign_out') return 'SIGN OUT';
+      if (status === 'leave') return 'LEAVE';
       return 'SIGN IN';
     }
 
     function statusClass(status) {
-      return status === 'sign_out' ? 'sign_out' : 'sign_in';
+      if (status === 'sign_out') return 'sign_out';
+      if (status === 'leave') return 'leave';
+      return 'sign_in';
     }
 
     async function loadStats() {
@@ -519,11 +640,25 @@
       data.forEach(row => {
         const tr = document.createElement('tr');
         const st = statusClass(row.status);
+        const isRequest = row.reason && String(row.reason).startsWith('TIME_CHANGE_REQUEST:');
+        const isLeave = row.status === 'leave';
+        const statusText = isRequest
+          ? 'TIME CHANGE REQ'
+          : statusLabel(row.status);
+        const statusHtml = isRequest
+          ? '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(226,96,79,0.15);color:var(--danger);">TIME CHANGE REQ</span>'
+          : '<span class="status-' + st + '">' + statusText + '</span>';
+        let reasonNote = '';
+        if (isRequest) {
+          reasonNote = '<br><span style="font-size:11px;color:var(--muted);">' + escapeHtml(String(row.reason).replace(/^TIME_CHANGE_REQUEST:\s*/, '')) + '</span>';
+        } else if (isLeave && row.reason) {
+          reasonNote = '<br><span style="font-size:11px;color:var(--muted);">' + escapeHtml(row.reason) + '</span>';
+        }
         tr.innerHTML =
           '<td>' + escapeHtml(row.date) + '</td>' +
-          '<td>' + escapeHtml(row.time) + '</td>' +
-          '<td><strong>' + escapeHtml(row.employee_name) + '</strong></td>' +
-          '<td><span class="status-' + st + '">' + statusLabel(row.status) + '</span></td>' +
+          '<td>' + (isLeave ? '—' : escapeHtml(row.time)) + '</td>' +
+          '<td><strong>' + escapeHtml(row.employee_name) + '</strong>' + reasonNote + '</td>' +
+          '<td>' + statusHtml + '</td>' +
           '<td>' +
             '<button class="edit-btn" type="button">Edit</button>' +
             '<button class="delete-btn" type="button">Delete</button>' +
@@ -540,11 +675,71 @@
       loadAttendance();
     }
 
+    function csvEscape(val) {
+      const s = String(val ?? '');
+      if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }
+
+    async function exportAttendanceCsv() {
+      if (!requireSupabase()) return;
+      let query = db.from('attendance').select('*')
+        .order('date', { ascending: false })
+        .order('time', { ascending: false });
+      const filterDate = document.getElementById('filterDate').value;
+      const filterStatus = document.getElementById('filterStatus').value;
+      if (filterDate) query = query.eq('date', filterDate);
+      if (filterStatus) query = query.eq('status', filterStatus);
+      const { data, error } = await query;
+      if (error) {
+        alert('Export failed: ' + error.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        alert('No records to export.');
+        return;
+      }
+      const headers = ['Date', 'Time', 'Employee Name', 'Status', 'Reason'];
+      const lines = [headers.join(',')];
+      data.forEach(row => {
+        let status = 'Sign In';
+        if (row.reason && String(row.reason).startsWith('TIME_CHANGE_REQUEST:')) {
+          status = 'TIME_CHANGE_REQUEST';
+        } else if (row.status === 'sign_out') {
+          status = 'Sign Out';
+        } else if (row.status === 'leave') {
+          status = 'Leave';
+        }
+        const reason = row.reason
+          ? String(row.reason).replace(/^TIME_CHANGE_REQUEST:\s*/, '')
+          : '';
+        lines.push([
+          csvEscape(row.date),
+          csvEscape(row.status === 'leave' ? '' : row.time),
+          csvEscape(row.employee_name),
+          csvEscape(status),
+          csvEscape(reason)
+        ].join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const suffix = filterDate ? filterDate : 'all';
+      a.download = 'attendance_' + suffix + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     function openEdit(row) {
       document.getElementById('editId').value = row.id;
       document.getElementById('editDate').value = row.date || '';
       document.getElementById('editTime').value = row.time || '';
-      document.getElementById('editStatus').value = (row.status === 'sign_out') ? 'sign_out' : 'sign_in';
+      const st = row.status;
+      document.getElementById('editStatus').value =
+        (st === 'sign_out' || st === 'leave') ? st : 'sign_in';
       editModal.classList.add('show');
     }
 
@@ -568,6 +763,8 @@
       closeModal();
       loadAttendance();
       loadStats();
+      const d = document.getElementById('hoursDate').value || new Date().toISOString().split('T')[0];
+      loadEmployeesHours(d);
     }
 
     async function deleteRecord(id) {
@@ -580,6 +777,8 @@
       }
       loadAttendance();
       loadStats();
+      const d = document.getElementById('hoursDate').value || new Date().toISOString().split('T')[0];
+      loadEmployeesHours(d);
     }
 
     function setupApp() {
@@ -593,8 +792,18 @@
       document.getElementById('addEmployeeBtn').addEventListener('click', addEmployee);
       document.getElementById('filterBtn').addEventListener('click', loadAttendance);
       document.getElementById('clearBtn').addEventListener('click', clearFilters);
+      document.getElementById('exportCsvBtn').addEventListener('click', exportAttendanceCsv);
       document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
       document.getElementById('cancelEditBtn').addEventListener('click', closeModal);
+      document.getElementById('hoursFilterBtn').addEventListener('click', () => {
+        const d = document.getElementById('hoursDate').value || new Date().toISOString().split('T')[0];
+        loadEmployeesHours(d);
+      });
+      document.getElementById('hoursTodayBtn').addEventListener('click', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('hoursDate').value = today;
+        loadEmployeesHours(today);
+      });
       passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
       editModal.addEventListener('click', e => { if (e.target === editModal) closeModal(); });
       if (sessionStorage.getItem('adminLoggedIn') === 'true') showDashboard();
