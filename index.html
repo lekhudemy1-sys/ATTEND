@@ -231,7 +231,7 @@
       <p class="subtitle">Select your name to sign in or out</p>
 
       <div id="lockedMsg" class="locked-msg">
-        Both sign in and sign out are already recorded on this device today.
+        Sign in and sign out are already recorded on this device today.
       </div>
 
       <label for="employeeSelect">Your name</label>
@@ -246,6 +246,23 @@
       <div class="hint" id="hintLine"></div>
 
       <div id="status"></div>
+
+      <div class="divider"></div>
+      <h1 class="section-title" style="font-size:16px;">Apply for leave</h1>
+      <p class="subtitle" style="margin-bottom:12px;">Mark yourself on leave for a day.</p>
+      <label for="leaveDate">Leave date</label>
+      <input type="date" id="leaveDate" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#0f151c;color:var(--text);font-family:inherit;margin-bottom:12px;">
+      <label for="leaveReason">Reason (optional)</label>
+      <textarea id="leaveReason" rows="2" placeholder="e.g. Personal, medical, family" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#0f151c;color:var(--text);font-family:inherit;resize:vertical;margin-bottom:12px;"></textarea>
+      <button id="leaveBtn" type="button" style="width:100%;padding:12px;background:var(--danger);color:#fff;border:0;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;font-family:inherit;margin-bottom:8px;">Submit leave</button>
+
+      <div class="divider"></div>
+      <h1 class="section-title" style="font-size:16px;">Request time change</h1>
+      <p class="subtitle" style="margin-bottom:12px;">If your recorded time needs correction, submit a request.</p>
+      <label for="changeReason">Reason</label>
+      <textarea id="changeReason" rows="2" placeholder="e.g. Forgot to sign out, actual time was 6:30 PM" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#0f151c;color:var(--text);font-family:inherit;resize:vertical;margin-bottom:12px;"></textarea>
+      <button id="requestChangeBtn" type="button" style="width:100%;padding:12px;background:var(--panel-raised);color:var(--text);border:1px solid var(--line);border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;font-family:inherit;">Submit request</button>
+
       <a href="admin.html" class="admin-link">Admin login →</a>
     </div>
   </div>
@@ -339,8 +356,9 @@
       const signOutVisible = signOutBtn.style.display !== 'none';
       const signOutLocked = isLocked(LOCK_SIGNOUT_KEY);
 
+      // Sign out only allowed after sign-in has been done today
       signInBtn.disabled = signInLocked;
-      signOutBtn.disabled = signOutLocked;
+      signOutBtn.disabled = signOutLocked || !signInLocked;
 
       const fullyDone = signInLocked && (!signOutVisible || signOutLocked);
       lockedMsg.style.display = fullyDone ? 'block' : 'none';
@@ -348,10 +366,14 @@
 
       if (fullyDone) {
         hintLine.textContent = '';
+      } else if (!signInLocked) {
+        hintLine.textContent = signOutVisible
+          ? 'Sign in first — then you can sign out.'
+          : 'Sign in first. Sign out opens after 1 PM.';
       } else if (signInLocked && signOutVisible && !signOutLocked) {
         hintLine.textContent = 'Signed in for today — sign out is still open.';
-      } else if (!signInLocked && !signOutVisible) {
-        hintLine.textContent = 'Sign out opens after 1 PM.';
+      } else if (signInLocked && !signOutVisible) {
+        hintLine.textContent = 'Signed in. Sign out opens after 1 PM.';
       } else {
         hintLine.textContent = '';
       }
@@ -455,9 +477,122 @@
       );
     }
 
+    function formatDuration(ms) {
+      if (!Number.isFinite(ms) || ms < 0) return '0h 0m';
+      const totalMin = Math.floor(ms / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      return h + 'h ' + m + 'm';
+    }
+
+    async function getTodaySignInTime(employeeId) {
+      if (!db) return null;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { data, error } = await db.from('attendance')
+        .select('time')
+        .eq('employee_id', employeeId)
+        .eq('date', todayStr)
+        .eq('status', 'sign_in')
+        .order('time', { ascending: true })
+        .limit(1);
+      if (error || !data || data.length === 0) return null;
+      return data[0].time;
+    }
+
     async function markSignOut() {
       if (isLocked(LOCK_SIGNOUT_KEY)) { refreshAvailability(); return; }
-      await saveAttendance('sign_out', 'Sign Out successful', LOCK_SIGNOUT_KEY);
+      if (!isLocked(LOCK_SIGNIN_KEY)) {
+        showStatus('Please sign in first before signing out.', 'error');
+        return;
+      }
+      const emp = getSelectedEmployee();
+      if (!emp) {
+        showStatus('Please select your name first.', 'error');
+        return;
+      }
+
+      // Fetch today's sign-in time to compute working hours
+      const signInTime = await getTodaySignInTime(emp.id);
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().slice(0, 8);
+
+      let hoursMsg = '';
+      if (signInTime) {
+        const inParts = signInTime.split(':').map(Number);
+        const outParts = timeStr.split(':').map(Number);
+        const inDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), inParts[0] || 0, inParts[1] || 0, inParts[2] || 0);
+        const outDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), outParts[0] || 0, outParts[1] || 0, outParts[2] || 0);
+        const diffMs = outDate - inDate;
+        hoursMsg = '<br><strong>Total worked: ' + formatDuration(diffMs) + '</strong>';
+      }
+
+      const saved = await saveAttendance('sign_out', 'Sign Out successful' + hoursMsg, LOCK_SIGNOUT_KEY);
+      // hours shown only once via the status message above
+    }
+
+    async function submitLeave() {
+      if (!requireSupabase()) return;
+      const emp = getSelectedEmployee();
+      if (!emp) {
+        showStatus('Please select your name first.', 'error');
+        return;
+      }
+      const leaveDateEl = document.getElementById('leaveDate');
+      const leaveDate = (leaveDateEl.value || '').trim();
+      if (!leaveDate) {
+        showStatus('Please select a leave date.', 'error');
+        return;
+      }
+      const reason = (document.getElementById('leaveReason').value || '').trim();
+      const timeStr = '00:00:00';
+      const { error } = await db.from('attendance').insert({
+        employee_id: emp.id,
+        employee_name: emp.name,
+        date: leaveDate,
+        time: timeStr,
+        status: 'leave',
+        reason: reason || null
+      });
+      if (error) {
+        showStatus('Error submitting leave: ' + escapeHtml(error.message), 'error');
+        return;
+      }
+      leaveDateEl.value = '';
+      document.getElementById('leaveReason').value = '';
+      showStatus('Leave marked for <strong>' + escapeHtml(emp.name) + '</strong> on ' + escapeHtml(leaveDate) + (reason ? '<br>' + escapeHtml(reason) : ''), 'success');
+    }
+
+    async function submitTimeChangeRequest() {
+      if (!requireSupabase()) return;
+      const emp = getSelectedEmployee();
+      if (!emp) {
+        showStatus('Please select your name first.', 'error');
+        return;
+      }
+      const reasonEl = document.getElementById('changeReason');
+      const reason = (reasonEl.value || '').trim();
+      if (!reason) {
+        showStatus('Please enter a reason for the time change request.', 'error');
+        return;
+      }
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().slice(0, 8);
+      const { error } = await db.from('attendance').insert({
+        employee_id: emp.id,
+        employee_name: emp.name,
+        date: dateStr,
+        time: timeStr,
+        status: 'sign_in',
+        reason: 'TIME_CHANGE_REQUEST: ' + reason
+      });
+      if (error) {
+        showStatus('Error submitting request: ' + escapeHtml(error.message), 'error');
+        return;
+      }
+      reasonEl.value = '';
+      showStatus('Time change request submitted for <strong>' + escapeHtml(emp.name) + '</strong>. Admin will review.', 'success');
     }
 
     function setupApp() {
@@ -470,10 +605,15 @@
 
       signInBtn.addEventListener('click', markSignIn);
       signOutBtn.addEventListener('click', markSignOut);
+      document.getElementById('leaveBtn').addEventListener('click', submitLeave);
+      document.getElementById('requestChangeBtn').addEventListener('click', submitTimeChangeRequest);
 
       employeeSelect.addEventListener('change', () => {
         statusEl.style.display = 'none';
       });
+
+      // Default leave date to today
+      document.getElementById('leaveDate').value = new Date().toISOString().split('T')[0];
 
       renderClock();
       setInterval(renderClock, 1000);
